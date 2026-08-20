@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rekap Bulanan — PPh 21 System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/app.css">
+</head>
+<body>
+<div class="app"><div class="main">
+  <div class="content">
+    <div class="page-head"><div class="page-head__row">
+      <div><h1>Rekap Bulanan</h1><p>Daftar pemotongan PPh Pasal 21 seluruh pegawai untuk satu masa pajak — siap dijadikan lampiran bukti potong.</p></div>
+      <div class="spacer"></div>
+      <select id="monthSel" style="padding:9px 12px;border:1px solid var(--line-strong);border-radius:8px;font-weight:600;font-family:var(--sans);font-size:13.5px"></select>
+      <button class="btn" id="printBtn"></button>
+    </div></div>
+
+    <div class="card">
+      <div class="card__head"><h3 id="ttl">Rekap</h3><div class="spacer"></div><span class="pill pill--teal" id="cnt"></span></div>
+      <div class="card__body card__body--flush">
+        <div class="table-wrap"><table class="grid" id="tbl">
+          <thead><tr>
+            <th>No</th><th>Nama</th><th>NIK</th><th>Kode Objek</th><th>PTKP</th>
+            <th class="num">Bruto Teratur</th><th class="num">Tidak Teratur</th><th class="num">DPP</th>
+            <th>TER</th><th class="num">PPh 21</th>
+          </tr></thead><tbody></tbody>
+        </table></div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<script src="../../assets/js/auth.js"></script>
+<script src="../../assets/js/reference.js"></script>
+<script src="../../assets/js/seed-data.js"></script>
+<script src="../../assets/js/store.js"></script>
+<script src="../../assets/js/engine.js"></script>
+<script src="../../assets/js/ui.js"></script>
+<script>
+Auth.guard();
+let MK="JAN";
+(async function(){
+  await DB.ensureSeed(); await DB.ensureTer();
+  UI.mount("rekap","Perhitungan / <b>Rekap Bulanan</b>");
+  const sel=document.getElementById("monthSel");
+  sel.innerHTML=REF.months.map(m=>`<option value="${m.key}">${m.label}</option>`).join("");
+  sel.onchange=()=>{MK=sel.value;render();};
+  document.getElementById("printBtn").innerHTML=UI.icon("print")+" Cetak";
+  document.getElementById("printBtn").onclick=()=>window.print();
+  render();
+})();
+function render(){
+  const wb=DB.load(), label=REF.months.find(m=>m.key===MK).label;
+  document.getElementById("ttl").textContent="Masa Pajak "+label+" "+wb.meta.year;
+  const objMap=Object.fromEntries(REF.objCodes.map(o=>[o.kode,o.uraian]));
+  let tBruto=0,tTdk=0,tDpp=0,tPph=0,n=0;
+  const rows=wb.employees.map((emp,i)=>{
+    const inc=DB.incomeFor(MK,emp);
+    if(!inc.gaji&&!inc.tunjLain&&!inc.honor&&!inc.tantiem) return "";
+    const r=Engine.monthly({...emp,...inc},inc.tantiem||0);
+    tBruto+=r.brutoTeratur;tTdk+=r.tantiem;tDpp+=r.dpp;tPph+=r.pph;n++;
+    return `<tr>
+      <td>${n}</td><td><b>${emp.nama}</b></td><td style="font-family:var(--mono);font-size:11px">${emp.nik||'—'}</td>
+      <td><span class="pill pill--muted" title="${objMap[emp.kodeObjek]||''}">${emp.kodeObjek}</span></td>
+      <td>${emp.ptkp}</td>
+      <td class="num">${fmt.rpPlain(r.brutoTeratur)}</td>
+      <td class="num">${r.tantiem?fmt.rpPlain(r.tantiem):'—'}</td>
+      <td class="num">${fmt.rpPlain(r.dpp)}</td>
+      <td><span class="pill pill--clay">${r.category.replace('TER ','')} ${fmt.pct(r.rate)}</span></td>
+      <td class="num"><b>${fmt.rpPlain(r.pph)}</b></td>
+    </tr>`;
+  }).join("");
+  document.getElementById("cnt").textContent=n+" pegawai";
+  document.querySelector("#tbl tbody").innerHTML = n?
+    rows+`<tr class="tfoot-total"><td colspan="5" style="text-align:right">Total</td>
+      <td class="num">${fmt.rpPlain(tBruto)}</td><td class="num">${fmt.rpPlain(tTdk)}</td>
+      <td class="num">${fmt.rpPlain(tDpp)}</td><td></td><td class="num">${fmt.rpPlain(tPph)}</td></tr>`
+    : `<tr><td colspan="10"><div class="empty">Belum ada penghasilan yang diinput untuk masa ${label}.</div></td></tr>`;
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Summary Setahun — PPh 21 System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/app.css">
+</head>
+<body>
+<div class="app"><div class="main">
+  <div class="content">
+    <div class="page-head"><div class="page-head__row">
+      <div><h1>Summary Setahun</h1><p>Matriks pemotongan PPh Pasal 21 tiap pegawai per masa pajak, dari Januari sampai Desember.</p></div>
+      <div class="spacer"></div>
+      <button class="btn" id="exportBtn"></button>
+      <button class="btn" id="printBtn"></button>
+    </div></div>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="card">
+      <div class="card__head"><h3>Rekap PPh 21 per Pegawai</h3><div class="spacer"></div>
+        <input id="search" placeholder="Cari nama…" style="padding:7px 11px;border:1px solid var(--line-strong);border-radius:8px;font-size:13px;width:200px"></div>
+      <div class="card__body card__body--flush">
+        <div class="table-wrap"><table class="grid" id="tbl"><thead></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<script src="../../assets/js/auth.js"></script>
+<script src="../../assets/js/reference.js"></script>
+<script src="../../assets/js/seed-data.js"></script>
+<script src="../../assets/js/store.js"></script>
+<script src="../../assets/js/engine.js"></script>
+<script src="../../assets/js/ui.js"></script>
+<script>
+Auth.guard();
+let DATA=[];
+(async function(){
+  await DB.ensureSeed(); await DB.ensureTer();
+  UI.mount("summary","Perhitungan / <b>Summary Setahun</b>");
+  document.getElementById("printBtn").innerHTML=UI.icon("print")+" Cetak";
+  document.getElementById("exportBtn").innerHTML=UI.icon("download")+" Ekspor CSV";
+  document.getElementById("printBtn").onclick=()=>window.print();
+  document.getElementById("exportBtn").onclick=exportCsv;
+  document.getElementById("search").oninput=render;
+
+  const wb=DB.load();
+  DATA=wb.employees.map(emp=>{
+    const per=REF.months.map(mo=>{
+      const inc=DB.incomeFor(mo.key,emp);
+      return Engine.monthly({...emp,...inc}, inc.tantiem||0).pph;
+    });
+    return {emp, per, total:per.reduce((a,b)=>a+b,0)};
+  });
+
+  // header
+  const th=document.querySelector("#tbl thead");
+  th.innerHTML=`<tr><th>No</th><th>Nama</th>${REF.months.map(m=>`<th class="num">${m.label.slice(0,3)}</th>`).join("")}<th class="num">Total</th></tr>`;
+
+  // stats
+  const grand=DATA.reduce((a,d)=>a+d.total,0);
+  const perMonth=REF.months.map((m,i)=>DATA.reduce((a,d)=>a+d.per[i],0));
+  const maxM=perMonth.indexOf(Math.max(...perMonth));
+  document.getElementById("stats").innerHTML=`
+    <div class="stat"><div class="stat__label">Total PPh 21 Setahun</div>
+      <div class="stat__value" style="font-size:20px">${fmt.rp(grand)}</div><div class="stat__meta">seluruh pegawai</div></div>
+    <div class="stat stat--clay"><div class="stat__label">Rata-rata / Bulan</div>
+      <div class="stat__value" style="font-size:20px">${fmt.rp(grand/12)}</div><div class="stat__meta">12 masa pajak</div></div>
+    <div class="stat stat--ok"><div class="stat__label">Masa Tertinggi</div>
+      <div class="stat__value" style="font-size:20px">${REF.months[maxM].label}</div><div class="stat__meta">${fmt.rp(perMonth[maxM])}</div></div>
+    <div class="stat"><div class="stat__label">Jumlah Pegawai</div>
+      <div class="stat__value">${DATA.length}</div><div class="stat__meta">dalam rekap</div></div>`;
+
+  render();
+})();
+
+function render(){
+  const q=(document.getElementById("search").value||"").toLowerCase();
+  const rows=DATA.filter(d=>d.emp.nama.toLowerCase().includes(q));
+  const tb=document.querySelector("#tbl tbody");
+  const colTot=REF.months.map((_,i)=>rows.reduce((a,d)=>a+d.per[i],0));
+  const grand=rows.reduce((a,d)=>a+d.total,0);
+  tb.innerHTML = rows.map((d,i)=>`<tr>
+    <td>${i+1}</td><td><b>${d.emp.nama}</b></td>
+    ${d.per.map(v=>`<td class="num">${v?fmt.rpPlain(v):'—'}</td>`).join("")}
+    <td class="num"><b>${fmt.rpPlain(d.total)}</b></td></tr>`).join("") +
+    `<tr class="tfoot-total"><td colspan="2" style="text-align:right">Total</td>
+      ${colTot.map(v=>`<td class="num">${fmt.rpPlain(v)}</td>`).join("")}
+      <td class="num">${fmt.rpPlain(grand)}</td></tr>`;
+}
+
+function exportCsv(){
+  const head=["No","Nama",...REF.months.map(m=>m.label),"Total"];
+  const rows=DATA.map((d,i)=>[i+1,d.emp.nama,...d.per,d.total]);
+  const csv=[head,...rows].map(r=>r.map(c=>`"${c}"`).join(",")).join("\n");
+  const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+  a.download=`Summary_PPh21_${DB.load().meta.year}.csv`;a.click();
+  UI.toast("Summary diekspor");
+}
+</script>
+</body>
+</html>

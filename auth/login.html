@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Masuk — PPh 21 System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/app.css">
+<style>
+  body{display:grid;place-items:center;min-height:100vh;
+    background:
+      radial-gradient(1200px 500px at 80% -10%, rgba(15,90,82,.10), transparent),
+      radial-gradient(900px 500px at -10% 110%, rgba(194,112,61,.10), transparent),
+      var(--paper);
+    padding:24px}
+  .login{width:100%;max-width:920px;display:grid;grid-template-columns:1.1fr 1fr;
+    background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden;
+    box-shadow:0 30px 70px -30px rgba(22,48,47,.4)}
+  .login__brand{background:linear-gradient(160deg,#0f5a52,#0b3d38);color:#dcece9;padding:44px 40px;
+    display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden}
+  .login__brand::after{content:"";position:absolute;right:-60px;bottom:-60px;width:220px;height:220px;
+    border-radius:50%;background:radial-gradient(circle,rgba(28,138,125,.5),transparent 70%)}
+  .brand-mark{width:52px;height:52px;border-radius:13px;background:linear-gradient(150deg,#1c8a7d,#0b4841);
+    display:grid;place-items:center;font-family:var(--display);font-weight:700;color:#fff;font-size:20px;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
+  .login__brand h1{font-size:27px;color:#fff;margin-top:26px;line-height:1.15}
+  .login__brand p{color:#9fc4bd;margin-top:12px;font-size:13.5px;max-width:34ch;line-height:1.6}
+  .brand-facts{position:relative;z-index:1;font-size:12.5px;color:#bcd7d2;line-height:1.9}
+  .brand-facts b{color:#fff}
+  .login__form{padding:44px 40px;display:flex;flex-direction:column;justify-content:center}
+  .login__form h2{font-size:21px;margin-bottom:4px}
+  .login__form .sub{color:var(--ink-soft);font-size:13px;margin-bottom:26px}
+  .err{background:var(--danger-050);color:var(--danger);padding:10px 13px;border-radius:9px;
+    font-size:12.5px;font-weight:500;margin-bottom:16px;display:none}
+  .err.show{display:block}
+  .cred-hint{margin-top:20px;font-size:11.5px;color:var(--ink-soft);background:#f0ede6;
+    padding:11px 13px;border-radius:9px;line-height:1.6}
+  .cred-hint code{font-family:var(--mono);background:#fff;padding:1px 6px;border-radius:5px;border:1px solid var(--line)}
+  @media(max-width:720px){.login{grid-template-columns:1fr}.login__brand{padding:34px 30px}
+    .login__form{padding:34px 30px}}
+</style>
+</head>
+<body>
+  <div class="login">
+    <div class="login__brand">
+      <div>
+        <div class="brand-mark">P21</div>
+        <h1>Aplikasi Perhitungan PPh Pasal 21</h1>
+        <p>Metode TER (PP 58/2023) untuk perhitungan bulanan dan rekonsiliasi tahunan Pasal 17 — dalam satu tempat.</p>
+      </div>
+      <div class="brand-facts">
+        <b>CV. VIDYA AMALIAH</b><br>
+        Strategic Business Partner — Gorontalo<br>
+        Tahun Pajak <b>2026</b>
+      </div>
+    </div>
+    <div class="login__form">
+      <h2>Masuk</h2>
+      <div class="sub">Silakan masuk untuk melanjutkan.</div>
+      <div class="err" id="err"></div>
+      <div class="field">
+        <label>Nama Pengguna</label>
+        <input type="text" id="username" autocomplete="username" placeholder="admin">
+      </div>
+      <div class="field">
+        <label>Kata Sandi</label>
+        <input type="password" id="password" autocomplete="current-password" placeholder="••••••••">
+      </div>
+      <button class="btn btn--primary" id="loginBtn" style="width:100%;justify-content:center;padding:11px">Masuk</button>
+      <div class="cred-hint">
+        Akun default: <code>admin</code> / <code>vidya2026</code> — ganti sandi setelah masuk pertama kali.
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/auth.js"></script>
+  <script>
+    Auth.seedUsers();
+    if (Auth.current()) location.replace("../pages/dashboard/index.html");
+    const err = document.getElementById("err");
+    function attempt() {
+      const u = document.getElementById("username").value;
+      const p = document.getElementById("password").value;
+      if (Auth.login(u, p)) location.replace("../pages/dashboard/index.html");
+      else { err.textContent = "Nama pengguna atau kata sandi salah."; err.classList.add("show"); }
+    }
+    document.getElementById("loginBtn").onclick = attempt;
+    document.getElementById("password").addEventListener("keydown", e => { if (e.key === "Enter") attempt(); });
+    document.getElementById("username").addEventListener("keydown", e => { if (e.key === "Enter") document.getElementById("password").focus(); });
+  </script>
+</body>
+</html>

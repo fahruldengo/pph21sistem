@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data Pemotong — PPh 21 System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/app.css">
+</head>
+<body>
+<div class="app"><div class="main">
+  <div class="content">
+    <div class="page-head"><div class="page-head__row">
+      <div><h1>Data Pemotong</h1><p>Identitas perusahaan pemotong PPh Pasal 21 yang tercantum pada bukti potong.</p></div>
+      <div class="spacer"></div>
+    </div></div>
+
+    <div class="card" style="max-width:760px">
+      <div class="card__head"><h3>Identitas Perusahaan &amp; Penandatangan</h3></div>
+      <div class="card__body">
+        <div class="sec-label">Perusahaan</div>
+        <div class="grid-2">
+          <div class="field"><label>Nama Perusahaan</label><input id="nama"></div>
+          <div class="field"><label>NPWP</label><input id="npwp" class="num"></div>
+        </div>
+        <div class="field"><label>Alamat</label><input id="alamat"></div>
+        <div class="grid-2">
+          <div class="field"><label>Kota / Kabupaten</label><input id="kota"></div>
+          <div class="field"><label>Telepon</label><input id="telp"></div>
+        </div>
+        <div class="sec-label">Penandatangan (Pemotong)</div>
+        <div class="grid-2">
+          <div class="field"><label>Nama Pemotong</label><input id="namaPemotong"></div>
+          <div class="field"><label>NPWP Pemotong</label><input id="npwpPemotong" class="num"></div>
+        </div>
+        <div class="field" style="max-width:220px"><label>Tahun Pajak</label><input id="tahun" class="num" type="number"></div>
+        <div style="display:flex;gap:10px;margin-top:8px">
+          <button class="btn btn--primary" id="saveBtn"></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<script src="../../assets/js/auth.js"></script>
+<script src="../../assets/js/reference.js"></script>
+<script src="../../assets/js/seed-data.js"></script>
+<script src="../../assets/js/store.js"></script>
+<script src="../../assets/js/engine.js"></script>
+<script src="../../assets/js/ui.js"></script>
+<script>
+Auth.guard();
+(async function(){
+  await DB.ensureSeed(); await DB.ensureTer();
+  UI.mount("pemotong","Data Induk / <b>Data Pemotong</b>");
+  const p = DB.load().pemotong;
+  const F = ["nama","npwp","alamat","kota","telp","namaPemotong","npwpPemotong","tahun"];
+  F.forEach(k => document.getElementById(k).value = p[k] ?? "");
+  document.getElementById("saveBtn").innerHTML = UI.icon("save")+" Simpan Perubahan";
+  document.getElementById("saveBtn").onclick = () => {
+    DB.patch(wb => {
+      F.forEach(k => wb.pemotong[k] = document.getElementById(k).value);
+      wb.pemotong.tahun = Number(document.getElementById("tahun").value) || wb.pemotong.tahun;
+      wb.meta.year = wb.pemotong.tahun;
+    });
+    UI.toast("Data pemotong tersimpan");
+  };
+})();
+</script>
+</body>
+</html>

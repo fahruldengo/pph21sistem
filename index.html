@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>PPh 21 System</title>
+<script>
+  (function () {
+    var s = null;
+    try { s = JSON.parse(sessionStorage.getItem("pph21_session")); } catch (e) {}
+    location.replace(s ? "pages/dashboard/index.html" : "auth/login.html");
+  })();
+</script>
+</head>
+<body></body>
+</html>

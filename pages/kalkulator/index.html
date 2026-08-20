@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kalkulator PPh 21 — PPh 21 System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/app.css">
+<style>
+  .calc-grid{display:grid;grid-template-columns:1fr 1.05fr;gap:22px}
+  @media(max-width:980px){.calc-grid{grid-template-columns:1fr}}
+  .terbilang{font-style:italic;color:var(--ink-soft);font-size:12.5px;background:#f0ede6;
+    padding:10px 13px;border-radius:9px;margin-top:14px;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="app"><div class="main">
+  <div class="content">
+    <div class="page-head"><h1>Kalkulator PPh 21</h1>
+      <p>Hitung PPh Pasal 21 satu pegawai dengan metode TER. Isi identitas dan penghasilan, hasil muncul otomatis.</p></div>
+
+    <div class="calc-grid">
+      <!-- INPUT -->
+      <div class="card">
+        <div class="card__head"><h3>Identitas &amp; Penghasilan</h3>
+          <div class="spacer"></div>
+          <button class="btn btn--sm" id="loadEmp">${''}Muat Pegawai</button>
+        </div>
+        <div class="card__body">
+          <div class="grid-2">
+            <div class="field"><label>Nama</label><input id="nama" value="DUMMY"></div>
+            <div class="field"><label>Status PTKP</label><select id="ptkp"></select></div>
+          </div>
+          <div class="grid-2">
+            <div class="field"><label>Punya NPWP</label><select id="npwp"><option>YA</option><option>TIDAK</option></select></div>
+            <div class="field"><label>Gross Up Tunj. PPh</label><select id="gross"><option>No</option><option>Yes</option></select></div>
+          </div>
+
+          <div class="sec-label">A. Penghasilan Teratur</div>
+          <div class="field input-blue"><label>Gaji Pokok</label><input id="gaji" class="num" value="7120576"></div>
+          <div class="field input-blue"><label>Tunjangan / Uang Makan / Lembur</label><input id="tunj" class="num" value="6500000"></div>
+          <div class="field input-blue"><label>Honorarium &amp; Imbalan Sejenis</label><input id="honor" class="num" value="0"></div>
+          <div class="field input-green"><label>Natura Objek PPh 21</label><input id="natura" class="num" value="0"></div>
+
+          <div class="sec-label">B. Penghasilan Tidak Teratur</div>
+          <div class="field input-green"><label>Bonus / THR / Tantiem</label><input id="tantiem" class="num" value="0"></div>
+
+          <div class="field" style="margin-top:6px">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="checkbox" id="premi" checked style="width:auto"> Sertakan premi BPJS (JKK, JKM, Kesehatan) sebagai penambah bruto
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- RESULT -->
+      <div class="card">
+        <div class="card__head"><h3>Hasil Perhitungan</h3>
+          <div class="spacer"></div><span class="pill pill--clay" id="terBadge">—</span></div>
+        <div class="card__body" id="result"></div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<script src="../../assets/js/auth.js"></script>
+<script src="../../assets/js/reference.js"></script>
+<script src="../../assets/js/seed-data.js"></script>
+<script src="../../assets/js/store.js"></script>
+<script src="../../assets/js/engine.js"></script>
+<script src="../../assets/js/ui.js"></script>
+<script>
+Auth.guard();
+(async function(){
+  await DB.ensureSeed(); await DB.ensureTer();
+  UI.mount("calc","Perhitungan / <b>Kalkulator PPh 21</b>");
+  document.getElementById("loadEmp").innerHTML = UI.icon("input")+" Muat Pegawai";
+
+  const ptkpSel = document.getElementById("ptkp");
+  ptkpSel.innerHTML = REF.ptkpList.map(v=>`<option ${v==="K/3"?"selected":""}>${v}</option>`).join("");
+
+  const ids = ["nama","ptkp","npwp","gross","gaji","tunj","honor","natura","tantiem","premi"];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    el.addEventListener("input", calc);
+    el.addEventListener("change", calc);
+  });
+
+  document.getElementById("loadEmp").onclick = () => {
+    const wb = DB.load();
+    const body = `<div class="field"><label>Pilih pegawai</label>
+      <select id="pickEmp">${wb.employees.map(e=>`<option value="${e.id}">${e.nama} — ${e.jabatan||''}</option>`).join("")}</select></div>
+      <div class="field"><label>Masa pajak</label>
+      <select id="pickMonth">${REF.months.map(m=>`<option value="${m.key}">${m.label}</option>`).join("")}</select></div>`;
+    const m = UI.modal({title:"Muat Data Pegawai", body, footer:`<button class="btn" id="c">Batal</button><button class="btn btn--primary" id="ok">Muat</button>`});
+    m.el.querySelector("#c").onclick=m.close;
+    m.el.querySelector("#ok").onclick=()=>{
+      const emp = wb.employees.find(e=>e.id===m.el.querySelector("#pickEmp").value);
+      const mo = m.el.querySelector("#pickMonth").value;
+      const inc = DB.incomeFor(mo, emp);
+      document.getElementById("nama").value=emp.nama;
+      document.getElementById("ptkp").value=emp.ptkp;
+      document.getElementById("gross").value=emp.grossUp?"Yes":"No";
+      document.getElementById("gaji").value=inc.gaji||0;
+      document.getElementById("tunj").value=inc.tunjLain||0;
+      document.getElementById("honor").value=inc.honor||0;
+      document.getElementById("natura").value=inc.natura||0;
+      document.getElementById("tantiem").value=inc.tantiem||0;
+      m.close(); calc();
+    };
+  };
+
+  calc();
+})();
+
+function calc(){
+  const g = id => document.getElementById(id);
+  const emp = {
+    ptkp:g("ptkp").value, grossUp:g("gross").value==="Yes", premiOn:g("premi").checked,
+    gaji:+g("gaji").value||0, tunjLain:+g("tunj").value||0, honor:+g("honor").value||0, natura:+g("natura").value||0
+  };
+  const tantiem = +g("tantiem").value||0;
+  const r = Engine.monthly(emp, tantiem);
+  const premi = emp.premiOn ? Engine.employerPremi(emp.gaji) : {jkk:0,jkm:0,kes:0,total:0};
+  const peng = Engine.pengurang(emp.gaji);
+
+  g("terBadge").textContent = r.category + " · " + fmt.pct(r.rate);
+
+  const line=(l,v,cls="")=>`<div class="result-line ${cls}"><span>${l}</span><span class="money">${fmt.rp(v)}</span></div>`;
+  g("result").innerHTML = `
+    <div class="sec-label" style="margin-top:0">Penghasilan Bruto</div>
+    ${line("Gaji pokok", emp.gaji)}
+    ${emp.grossUp ? line("Tunjangan PPh (gross up)", r.tunjPph, "result-line--sub") : ""}
+    ${line("Tunjangan / lembur", emp.tunjLain)}
+    ${emp.honor?line("Honorarium", emp.honor):""}
+    ${emp.premiOn?line("Premi JKK", premi.jkk, "result-line--sub"):""}
+    ${emp.premiOn?line("Premi JKM", premi.jkm, "result-line--sub"):""}
+    ${emp.premiOn?line("Premi BPJS Kesehatan (4%)", premi.kes, "result-line--sub"):""}
+    ${emp.natura?line("Natura objek PPh", emp.natura):""}
+    ${line("Jumlah Penghasilan Teratur", r.brutoTeratur)}
+    ${tantiem?line("Penghasilan Tidak Teratur (bonus/THR)", tantiem):""}
+    <div class="sec-label">Dasar Pengenaan &amp; Tarif</div>
+    ${line("Penghasilan Bruto / DPP", r.dpp)}
+    <div class="result-line"><span>Kategori TER</span><span class="money">${r.category}</span></div>
+    <div class="result-line"><span>Tarif Efektif (TER) bulanan</span><span class="money">${fmt.pct(r.rate)}</span></div>
+    <div class="result-line result-line--total"><span>PPh Pasal 21 Terutang Bulan Ini</span><span class="money">${fmt.rp(r.pph)}</span></div>
+    <div class="terbilang"><b>Terbilang:</b> ${terbilang(r.pph)}</div>
+
+    <div class="sec-label">Informasi Pengurang (untuk rekonsiliasi tahunan)</div>
+    ${line("Iuran JHT (2%)", peng.jht, "result-line--sub")}
+    ${line("Iuran Pensiun JP (1%, maks 100.423)", peng.jp, "result-line--sub")}
+  `;
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Perhitungan Tahunan — PPh 21 System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/app.css">
+</head>
+<body>
+<div class="app"><div class="main">
+  <div class="content">
+    <div class="page-head"><div class="page-head__row">
+      <div><h1>Perhitungan Tahunan</h1><p>Rekonsiliasi PPh Pasal 21 masa Desember: penghasilan setahun dikurangi biaya jabatan, iuran, dan PTKP, lalu dikenai tarif progresif Pasal 17. Selisih terhadap potongan Jan–Nov muncul di kolom terakhir.</p></div>
+      <div class="spacer"></div>
+      <button class="btn" id="printBtn"></button>
+    </div></div>
+
+    <div class="notice notice--clay">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div><b>Kurang Potong</b> = tambahan yang harus dipotong di Desember. <b>Lebih Potong</b> = kelebihan yang dikembalikan. Perhitungan memakai penghasilan yang sudah diinput pada tiap masa.</div>
+    </div>
+
+    <div class="card">
+      <div class="card__head"><h3>Rekonsiliasi Tahunan <span id="yr"></span></h3><div class="spacer"></div>
+        <span class="pill pill--teal" id="cnt"></span></div>
+      <div class="card__body card__body--flush">
+        <div class="table-wrap"><table class="grid" id="tbl">
+          <thead><tr>
+            <th>No</th><th>Nama</th><th>PTKP</th>
+            <th class="num">Bruto Setahun</th><th class="num">Biaya Jabatan</th><th class="num">Iuran Pensiun/JHT</th>
+            <th class="num">Neto Setahun</th><th class="num">PTKP</th><th class="num">PKP</th>
+            <th class="num">PPh Setahun</th><th class="num">Dipotong Jan–Nov</th>
+            <th class="num">PPh Desember</th><th>Status</th>
+          </tr></thead><tbody></tbody>
+        </table></div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<script src="../../assets/js/auth.js"></script>
+<script src="../../assets/js/reference.js"></script>
+<script src="../../assets/js/seed-data.js"></script>
+<script src="../../assets/js/store.js"></script>
+<script src="../../assets/js/engine.js"></script>
+<script src="../../assets/js/ui.js"></script>
+<script>
+Auth.guard();
+(async function(){
+  await DB.ensureSeed(); await DB.ensureTer();
+  UI.mount("tahunan","Perhitungan / <b>Perhitungan Tahunan</b>");
+  const wb=DB.load();
+  document.getElementById("yr").textContent=wb.meta.year;
+  document.getElementById("printBtn").innerHTML=UI.icon("print")+" Cetak";
+  document.getElementById("printBtn").onclick=()=>window.print();
+
+  let n=0, sumDec=0;
+  const rows=wb.employees.map((emp,i)=>{
+    // build 12 monthly results
+    const md=REF.months.map(mo=>{
+      const inc=DB.incomeFor(mo.key,emp);
+      return Engine.monthly({...emp,...inc}, inc.tantiem||0);
+    });
+    const hasData = md.some(m=>m.brutoTeratur>0);
+    if(!hasData) return "";
+    const jenis = (emp.bulanAkhir-emp.bulanMulai+1)<12 ? "Disetahunkan" : "Setahun Penuh";
+    const a=Engine.annual(emp, md, {jenis: jenis==="Disetahunkan"?"Disetahunkan":"FullYear"});
+    n++; sumDec+=a.december;
+    const stCls = a.status==="Kurang Potong"?"pill--clay":a.status==="Lebih Potong"?"pill--ok":"pill--muted";
+    return `<tr>
+      <td>${n}</td><td><b>${emp.nama}</b></td><td>${emp.ptkp}</td>
+      <td class="num">${fmt.rpPlain(a.dppBruto)}</td>
+      <td class="num">${fmt.rpPlain(a.biayaJabatan)}</td>
+      <td class="num">${fmt.rpPlain(a.iuranPensiun)}</td>
+      <td class="num">${fmt.rpPlain(a.netto)}</td>
+      <td class="num">${fmt.rpPlain(a.ptkp)}</td>
+      <td class="num">${fmt.rpPlain(a.pkp)}</td>
+      <td class="num">${fmt.rpPlain(a.pphTerutang)}</td>
+      <td class="num">${fmt.rpPlain(a.withheldPrior)}</td>
+      <td class="num"><b>${a.december<0?'('+fmt.rpPlain(-a.december)+')':fmt.rpPlain(a.december)}</b></td>
+      <td><span class="pill ${stCls}">${a.status}</span></td>
+    </tr>`;
+  }).join("");
+  document.getElementById("cnt").textContent=n+" pegawai";
+  document.querySelector("#tbl tbody").innerHTML = n ?
+    rows+`<tr class="tfoot-total"><td colspan="11" style="text-align:right">Total selisih Desember</td>
+      <td class="num">${sumDec<0?'('+fmt.rpPlain(-sumDec)+')':fmt.rpPlain(sumDec)}</td><td></td></tr>`
+    : `<tr><td colspan="13"><div class="empty">Belum ada data penghasilan sepanjang tahun untuk direkonsiliasi.</div></td></tr>`;
+})();
+</script>
+</body>
+</html>
