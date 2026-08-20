@@ -13,9 +13,17 @@ let PAGE = 1;
   sel.value = MONTH;
   sel.onchange = () => { MONTH = sel.value; PAGE = 1; render(); };
 
-  document.getElementById("exportBtn").innerHTML = UI.icon("download") + " Ekspor CSV";
-  document.getElementById("exportBtn").onclick = exportCsv;
+  document.getElementById("exportBtn").innerHTML = UI.icon("download") + " Ekspor ▾";
+  document.getElementById("resetBtn").innerHTML = UI.icon("reset") + " Reset Gaji";
+  document.getElementById("resetBtn").onclick = resetIncome;
   document.getElementById("search").oninput = () => { PAGE = 1; render(); };
+
+  // export dropdown
+  const pop = document.getElementById("exportPop");
+  document.getElementById("exportBtn").onclick = (e) => { e.stopPropagation(); pop.classList.toggle("show"); };
+  document.addEventListener("click", () => pop.classList.remove("show"));
+  pop.querySelectorAll("[data-fmt]").forEach(b =>
+    b.onclick = () => { pop.classList.remove("show"); doExport(b.dataset.fmt); });
 
   document.querySelectorAll("#statusFilter button").forEach(b => {
     b.onclick = () => {
@@ -203,25 +211,46 @@ function openIncomeModal(id) {
   };
 }
 
-/* ---------- CSV ---------- */
-function exportCsv() {
+/* ---------- Reset all monthly income for the active year ---------- */
+function resetIncome() {
+  const yr = DB.activeYear();
+  const body = `<p style="font-size:13.5px;line-height:1.6;color:var(--ink)">
+      Semua penghasilan bulanan tahun <b>${yr}</b> akan dikembalikan ke nilai awal:
+      gaji &amp; tunjangan mengikuti default tiap pegawai, sedangkan
+      <b>lembur, honor, natura, dan tantiem dikosongkan</b> untuk seluruh masa (Januari–Desember).</p>
+    <div class="notice notice--clay" style="margin:14px 0 0">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+      <div>Tindakan ini tidak dapat dibatalkan. Data tahun lain tidak terpengaruh.</div>
+    </div>`;
+  const m = UI.modal({ title: `Reset Gaji Tahun ${yr}`, body,
+    footer: `<button class="btn" id="c">Batal</button><button class="btn btn--danger" id="ok">${UI.icon('reset')} Reset Sekarang</button>` });
+  m.el.querySelector("#c").onclick = m.close;
+  m.el.querySelector("#ok").onclick = () => {
+    DB.resetIncome();
+    m.close(); UI.toast(`Gaji tahun ${yr} direset`); PAGE = 1; render();
+  };
+}
+
+/* ---------- Export CSV / XLSX ---------- */
+function doExport(fmt) {
   const wb = DB.load();
+  const yr = DB.activeYear();
   const rows = filtered();
-  const head = ["Nama", "Jabatan", "NIK", "PTKP", "GrossUp", "Status", "Gaji", "Tunjangan",
+  const head = ["No", "Nama", "Jabatan", "NIK", "PTKP", "GrossUp", "Status", "Gaji", "Tunjangan",
     "LemburLainLain", "TotalTunjangan", "Honorarium", "Natura", "Tantiem", "DPP", "TER%", "PPh21"];
-  const data = rows.map(emp => {
+  const data = rows.map((emp, i) => {
     const inc = DB.incomeFor(MONTH, emp);
     const r = Engine.monthly({ ...emp, ...inc }, inc.tantiem || 0);
-    return [emp.nama, emp.jabatan, emp.nik, emp.ptkp, emp.grossUp ? "Yes" : "No",
+    return [i + 1, emp.nama, emp.jabatan, emp.nik, emp.ptkp, emp.grossUp ? "Yes" : "No",
       (emp.status || "aktif"), inc.gaji || 0, inc.tunjLain || 0, inc.lembur || 0,
       (inc.tunjLain || 0) + (inc.lembur || 0), inc.honor || 0, inc.natura || 0,
-      inc.tantiem || 0, r.dpp, (r.rate * 100), r.pph];
+      inc.tantiem || 0, r.dpp, +(r.rate * 100).toFixed(2), r.pph];
   });
-  const csv = [head, ...data].map(r => r.map(c => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
-  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `PPh21_${MONTH}_${wb.meta.year}.csv`;
-  a.click();
-  UI.toast("CSV diekspor");
+  const monthLabel = REF.months.find(m => m.key === MONTH).label;
+  const filename = `PPh21_${monthLabel}_${yr}`;
+  Exporter.download(fmt, {
+    filename, sheetName: `${monthLabel} ${yr}`, head, rows: data,
+    numericCols: [7, 8, 9, 10, 11, 12, 13, 14, 16]  // money + DPP + PPh columns
+  });
+  UI.toast(fmt === "xlsx" ? "Excel diekspor" : "CSV diekspor");
 }

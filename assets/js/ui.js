@@ -82,13 +82,33 @@ window.UI = (function () {
     const main = document.querySelector(".main");
     const bar = document.createElement("div");
     bar.className = "topbar";
+    const years = DB.availableYears();
+    const yOpts = years.map(y => `<option value="${y}" ${y === DB.activeYear() ? "selected" : ""}>Tahun Pajak ${y}</option>`).join("");
     bar.innerHTML = `
       <button class="hamburger" id="hamburger">${icon("menu")}</button>
       <div class="topbar__crumbs">${crumbs || ""}</div>
       <div class="topbar__spacer"></div>
-      <span class="chip-year">Tahun Pajak ${DB.load().meta.year}</span>
+      <div class="year-picker">
+        <select id="yearSel" class="chip-year-sel">${yOpts}<option value="__add">+ Tambah tahun…</option></select>
+      </div>
       <div class="user-badge"><div class="user-badge__av">${initials}</div><span>${u.name}</span></div>`;
     main.prepend(bar);
+
+    // year switching
+    const ySel = document.getElementById("yearSel");
+    ySel.onchange = () => {
+      if (ySel.value === "__add") {
+        const now = new Date().getFullYear();
+        const input = prompt("Tambah tahun pajak baru (mis. " + (Math.max(...years) + 1) + "):", String(Math.max(...years) + 1));
+        const y = parseInt(input, 10);
+        if (!y || y < 2000 || y > 2100) { ySel.value = String(DB.activeYear()); return; }
+        DB.setActiveYear(y);
+        location.reload();
+      } else {
+        DB.setActiveYear(+ySel.value);
+        location.reload();
+      }
+    };
 
     // interactions
     document.getElementById("logoutBtn").onclick = (e) => {

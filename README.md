@@ -24,6 +24,20 @@ Basis data tersimpan di dalam browser (localStorage) sehingga tidak perlu server
 | **Perhitungan Tahunan** | Rekonsiliasi Pasal 17 masa Desember (kurang/lebih potong) |
 | **Summary Setahun** | Matriks PPh 21 tiap pegawai Januari–Desember |
 
+**Tahun pajak (multi-tahun).** Sistem mendukung banyak tahun. Pemilih **Tahun Pajak** di
+kanan atas setiap halaman dipakai untuk berpindah tahun atau menambah tahun baru lewat opsi
+**"+ Tambah tahun…"**. Setiap tahun menyimpan data penghasilannya sendiri secara terpisah;
+tahun baru mengambil gaji &amp; tunjangan default dari tahun sebelumnya sebagai titik awal.
+
+**Reset gaji.** Tombol **Reset Gaji** di menu Input Penghasilan mengembalikan seluruh
+penghasilan bulanan tahun aktif ke nilai awal (gaji &amp; tunjangan default; lembur, honor,
+natura, dan tantiem dikosongkan) untuk masa Januari–Desember. Tahun lain tidak terpengaruh.
+
+**Ekspor CSV / Excel.** Tombol **Ekspor** menyediakan pilihan **CSV (.csv)** dan **Excel
+(.xlsx)** di menu Input Penghasilan, Data Pegawai, dan Summary. File XLSX dibuat memakai
+SheetJS yang dibundel lokal (`assets/vendor/xlsx.full.min.js`) sehingga tetap berfungsi di
+GitHub Pages tanpa koneksi; angka rupiah tersimpan sebagai angka dengan format ribuan.
+
 **Status kepegawaian.** Setiap pegawai punya status **aktif** atau **nonaktif**. Saat
 pegawai ditandai nonaktif, Anda memilih bulan terakhir bekerja — penghasilan setelah bulan
 itu berhenti dihitung dan sel-nya terkunci di Input Penghasilan, tetapi pegawai **tetap masuk
@@ -97,7 +111,8 @@ pph21-system/
 │   ├── dashboard/
 │   ├── pemotong/
 │   ├── elemen/
-│   ├── input-penghasilan/
+│   ├── data-pegawai/          # monitoring pegawai (aktif & nonaktif)
+│   ├── input-penghasilan/     # input via pop-up, reset gaji, ekspor CSV/XLSX
 │   ├── kalkulator/
 │   ├── rekap-bulanan/
 │   ├── tahunan/
@@ -108,9 +123,11 @@ pph21-system/
     │   ├── auth.js            # login/sesi
     │   ├── reference.js       # tabel PTKP, ELEMEN, kode objek, Pasal 17
     │   ├── seed-data.js       # data awal dari Excel (55 pegawai, TER, pemotong)
-    │   ├── store.js           # "database" spreadsheet di localStorage
+    │   ├── store.js           # "database" spreadsheet di localStorage (multi-tahun)
     │   ├── engine.js          # mesin hitung PPh 21 (TER + tahunan)
-    │   └── ui.js              # sidebar, topbar, modal, toast
+    │   ├── export.js          # helper ekspor CSV / XLSX
+    │   └── ui.js              # sidebar, topbar (pemilih tahun), modal, toast
+    ├── vendor/xlsx.full.min.js # SheetJS (pembuat file .xlsx, offline)
     └── data/seed.json         # sumber data mentah (referensi)
 ```
 

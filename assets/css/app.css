@@ -93,6 +93,15 @@ h1,h2,h3,h4{font-family:var(--display);font-weight:600;letter-spacing:-.01em;lin
   font-family:var(--mono);font-size:12px;background:var(--brand-050);color:var(--brand-600);
   padding:5px 11px;border-radius:20px;font-weight:600;border:1px solid #cfe4e0;
 }
+.year-picker{position:relative}
+.chip-year-sel{
+  font-family:var(--mono);font-size:12px;background:var(--brand-050);color:var(--brand-600);
+  padding:6px 30px 6px 13px;border-radius:20px;font-weight:600;border:1px solid #cfe4e0;
+  cursor:pointer;appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%230d6e63' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 11px center}
+.chip-year-sel:focus{outline:none;box-shadow:0 0 0 3px var(--brand-050)}
+.chip-year-sel:hover{background-color:#e2efec}
 .user-badge{display:flex;align-items:center;gap:9px;font-size:13px}
 .user-badge__av{width:32px;height:32px;border-radius:50%;background:var(--accent-050);
   color:var(--accent);display:grid;place-items:center;font-weight:700;font-family:var(--display)}
@@ -235,7 +244,8 @@ table.grid tbody tr:last-child td{border-bottom:none}
 
 /* ---------- Print ---------- */
 @media print{
-  .sidebar,.topbar,.hamburger,.backdrop-nav,#printBtn,#exportBtn,#importBtn,#addBtn,
+  .sidebar,.topbar,.hamburger,.backdrop-nav,#printBtn,#exportBtn,#importBtn,#addBtn,#resetBtn,
+  .export-menu,.filter-bar,.filter-seg,.pager,
   #monthSel,#search,.page-head p,.notice,.btn{display:none!important}
   .main{margin-left:0}
   .content{padding:0;max-width:none}
@@ -280,3 +290,15 @@ table.grid tbody tr:last-child td{border-bottom:none}
 .modal-emp__month{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--brand-600);
   background:var(--brand-050);padding:5px 11px;border-radius:8px;white-space:nowrap}
 .calc-preview{margin-top:18px;padding:16px 18px;background:#f6f4ef;border:1px solid var(--line);border-radius:12px}
+
+/* ---------- Export dropdown ---------- */
+.export-menu{position:relative}
+.export-menu__pop{
+  position:absolute;top:calc(100% + 6px);right:0;z-index:30;min-width:190px;
+  background:var(--card);border:1px solid var(--line-strong);border-radius:10px;
+  box-shadow:0 12px 30px -8px rgba(22,48,47,.28);padding:6px;display:none}
+.export-menu__pop.show{display:block}
+.export-menu__pop button{
+  display:block;width:100%;text-align:left;padding:9px 12px;border:none;background:transparent;
+  border-radius:7px;font-family:var(--sans);font-size:13px;color:var(--ink);cursor:pointer}
+.export-menu__pop button:hover{background:var(--brand-050);color:var(--brand-600)}

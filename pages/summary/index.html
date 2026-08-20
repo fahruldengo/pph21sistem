@@ -14,7 +14,13 @@
     <div class="page-head"><div class="page-head__row">
       <div><h1>Summary Setahun</h1><p>Matriks pemotongan PPh Pasal 21 tiap pegawai per masa pajak, dari Januari sampai Desember.</p></div>
       <div class="spacer"></div>
-      <button class="btn" id="exportBtn"></button>
+      <div class="export-menu">
+        <button class="btn" id="exportBtn"></button>
+        <div class="export-menu__pop" id="exportPop">
+          <button data-fmt="csv">Ekspor CSV (.csv)</button>
+          <button data-fmt="xlsx">Ekspor Excel (.xlsx)</button>
+        </div>
+      </div>
       <button class="btn" id="printBtn"></button>
     </div></div>
 
@@ -35,6 +41,8 @@
 <script src="../../assets/js/seed-data.js"></script>
 <script src="../../assets/js/store.js"></script>
 <script src="../../assets/js/engine.js"></script>
+<script src="../../assets/vendor/xlsx.full.min.js"></script>
+<script src="../../assets/js/export.js"></script>
 <script src="../../assets/js/ui.js"></script>
 <script>
 Auth.guard();
@@ -43,9 +51,12 @@ let DATA=[];
   await DB.ensureSeed(); await DB.ensureTer();
   UI.mount("summary","Perhitungan / <b>Summary Setahun</b>");
   document.getElementById("printBtn").innerHTML=UI.icon("print")+" Cetak";
-  document.getElementById("exportBtn").innerHTML=UI.icon("download")+" Ekspor CSV";
+  document.getElementById("exportBtn").innerHTML=UI.icon("download")+" Ekspor ▾";
   document.getElementById("printBtn").onclick=()=>window.print();
-  document.getElementById("exportBtn").onclick=exportCsv;
+  const pop=document.getElementById("exportPop");
+  document.getElementById("exportBtn").onclick=(e)=>{e.stopPropagation();pop.classList.toggle("show");};
+  document.addEventListener("click",()=>pop.classList.remove("show"));
+  pop.querySelectorAll("[data-fmt]").forEach(b=>b.onclick=()=>{pop.classList.remove("show");doExport(b.dataset.fmt);});
   document.getElementById("search").oninput=render;
 
   const wb=DB.load();
@@ -93,14 +104,13 @@ function render(){
       <td class="num">${fmt.rpPlain(grand)}</td></tr>`;
 }
 
-function exportCsv(){
+function doExport(fmt){
+  const yr=DB.activeYear();
   const head=["No","Nama",...REF.months.map(m=>m.label),"Total"];
   const rows=DATA.map((d,i)=>[i+1,d.emp.nama,...d.per,d.total]);
-  const csv=[head,...rows].map(r=>r.map(c=>`"${c}"`).join(",")).join("\n");
-  const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
-  const a=document.createElement("a");a.href=URL.createObjectURL(blob);
-  a.download=`Summary_PPh21_${DB.load().meta.year}.csv`;a.click();
-  UI.toast("Summary diekspor");
+  const numericCols=[...Array(REF.months.length+1).keys()].map(k=>k+2); // month cols + total
+  Exporter.download(fmt,{filename:`Summary_PPh21_${yr}`,sheetName:`Summary ${yr}`,head,rows,numericCols});
+  UI.toast(fmt==="xlsx"?"Excel diekspor":"CSV diekspor");
 }
 </script>
 </body>

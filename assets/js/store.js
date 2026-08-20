@@ -10,7 +10,7 @@ window.DB = (function () {
 
   function blank() {
     return {
-      meta: { year: 2026, createdAt: Date.now() },
+      meta: { year: 2026, activeYear: 2026, createdAt: Date.now() },
       pemotong: {
         nama: "CV. VIDYA AMALIAH", npwp: "0934538901822000",
         alamat: "JL. NANI WARTABONE, KOTA SELATAN", kota: "GORONTALO",
@@ -18,7 +18,7 @@ window.DB = (function () {
         npwpPemotong: "077250454822000", tahun: 2026
       },
       employees: [],      // master data (mirrors DATA PEGAWAI cols)
-      income: {}          // income[MONTHKEY][employeeId] = {gaji,tunjLain,honor,natura,tantiem,zakat,grossUp,premiOn}
+      income: {}          // income[YEAR][MONTHKEY][employeeId] = {gaji,tunjLain,lembur,honor,natura,tantiem,zakat,grossUp,premiOn}
     };
   }
 
@@ -42,10 +42,11 @@ window.DB = (function () {
       grossUp: (e.grossUp === "Yes"), zakat: e.zakat || 0,
       status: "aktif", tglMasuk: "", tglKeluar: ""
     }));
-    wb.income["JAN"] = {};
+    const YEAR = wb.meta.activeYear;
+    wb.income[YEAR] = { JAN: {} };
     wb.employees.forEach((emp, i) => {
       const src = seed.employees[i];
-      wb.income["JAN"][emp.id] = {
+      wb.income[YEAR]["JAN"][emp.id] = {
         gaji: src.gaji || 0, tunjLain: src.tunjLain || 0, lembur: 0,
         honor: src.honor || 0, natura: src.natura || 0,
         tantiem: 0, zakat: src.zakat || 0,
@@ -61,14 +62,76 @@ window.DB = (function () {
     return Promise.resolve();
   }
 
+  const MONTH_KEYS = ["JAN","FEB","MAR","APR","MEI","JUN","JUL","AGU","SEP","OKT","NOV","DES"];
+
   function load() {
     if (cache) return cache;
     cache = JSON.parse(localStorage.getItem(KEY) || "null") || blank();
+    migrate(cache);
     // apply saved BPJS rate overrides to the live reference table
     if (window.REF && cache.meta && cache.meta.elemen) {
       Object.assign(window.REF.elemen, cache.meta.elemen);
     }
     return cache;
+  }
+
+  // Bring older workbooks up to the current schema (flat income -> year-keyed).
+  function migrate(wb) {
+    if (!wb.meta) wb.meta = { year: 2026, activeYear: 2026, createdAt: Date.now() };
+    if (!wb.meta.activeYear) wb.meta.activeYear = wb.meta.year || 2026;
+    if (!wb.income) wb.income = {};
+    // Detect old shape: top-level keys are MONTH names instead of year numbers.
+    const topKeys = Object.keys(wb.income);
+    const looksFlat = topKeys.some(k => MONTH_KEYS.includes(k));
+    if (looksFlat) {
+      const y = wb.meta.year || 2026;
+      const moved = {};
+      topKeys.forEach(k => { if (MONTH_KEYS.includes(k)) { moved[k] = wb.income[k]; delete wb.income[k]; } });
+      wb.income[y] = { ...(wb.income[y] || {}), ...moved };
+    }
+    if (!wb.income[wb.meta.activeYear]) wb.income[wb.meta.activeYear] = {};
+    wb.meta.year = wb.meta.activeYear; // keep mirror in sync
+  }
+
+  function activeYear() { return load().meta.activeYear; }
+  function availableYears() {
+    const wb = load();
+    const ys = Object.keys(wb.income).map(Number).filter(n => !isNaN(n));
+    if (!ys.includes(wb.meta.activeYear)) ys.push(wb.meta.activeYear);
+    return ys.sort((a, b) => a - b);
+  }
+
+  // Switch active tax year. A brand-new year starts with JANUARY seeded from
+  // each employee's recurring default (their gaji/tunjangan) so it's ready to use.
+  function setActiveYear(y) {
+    y = Number(y);
+    patch(wb => {
+      wb.meta.activeYear = y;
+      wb.meta.year = y;
+      if (!wb.income[y]) {
+        wb.income[y] = { JAN: {} };
+        // seed January from the recurring defaults of the earliest existing year
+        const years = Object.keys(wb.income).map(Number).filter(n => !isNaN(n) && n !== y).sort((a, b) => a - b);
+        const baseYear = years[0];
+        const baseJan = baseYear ? (wb.income[baseYear]["JAN"] || {}) : {};
+        wb.employees.forEach(emp => {
+          const b = baseJan[emp.id];
+          wb.income[y]["JAN"][emp.id] = b
+            ? { gaji: b.gaji || 0, tunjLain: b.tunjLain || 0, lembur: 0, honor: 0, natura: 0,
+                tantiem: 0, zakat: emp.zakat || 0, grossUp: emp.grossUp, premiOn: true }
+            : { gaji: 0, tunjLain: 0, lembur: 0, honor: 0, natura: 0, tantiem: 0,
+                zakat: emp.zakat || 0, grossUp: emp.grossUp, premiOn: true };
+        });
+      }
+    });
+  }
+
+  function addYear(y) { setActiveYear(y); }
+
+  function yearBucket(wb) {
+    const y = wb.meta.activeYear;
+    wb.income[y] = wb.income[y] || {};
+    return wb.income[y];
   }
   function save(wb) { cache = wb; localStorage.setItem(KEY, JSON.stringify(wb)); }
   function patch(fn) { const wb = load(); fn(wb); save(wb); }
@@ -89,21 +152,45 @@ window.DB = (function () {
   const ZERO_INC = e => ({ gaji: 0, tunjLain: 0, lembur: 0, honor: 0, natura: 0, tantiem: 0,
     zakat: e.zakat || 0, grossUp: e.grossUp, premiOn: true });
 
-  // Income accessor for a given month, defaulting from master + January.
-  // Outside the employment window (e.g. after an employee left) returns zeros.
+  // Income accessor for a given month in the ACTIVE YEAR, defaulting from the
+  // year's January (recurring salary). Outside the employment window returns zeros.
   function incomeFor(monthKey, emp) {
     if (!isPayMonth(monthKey, emp)) return ZERO_INC(emp);
     const wb = load();
-    const m = wb.income[monthKey] || {};
+    const bucket = wb.income[wb.meta.activeYear] || {};
+    const m = bucket[monthKey] || {};
     if (m[emp.id]) return m[emp.id];
-    // default: reuse January (recurring salary) or zeros
-    const jan = (wb.income["JAN"] || {})[emp.id];
+    // default: reuse this year's January (recurring salary) or zeros
+    const jan = (bucket["JAN"] || {})[emp.id];
     return jan ? { ...jan, tantiem: 0 } : ZERO_INC(emp);
   }
   function setIncome(monthKey, empId, data) {
     patch(wb => {
-      wb.income[monthKey] = wb.income[monthKey] || {};
-      wb.income[monthKey][empId] = data;
+      const bucket = yearBucket(wb);
+      bucket[monthKey] = bucket[monthKey] || {};
+      bucket[monthKey][empId] = data;
+    });
+  }
+
+  // Reset all monthly income for the ACTIVE YEAR back to defaults. January is
+  // re-seeded from each employee's recurring gaji/tunjangan; Feb–Dec are cleared
+  // (they fall back to the January default via incomeFor).
+  function resetIncome() {
+    patch(wb => {
+      const y = wb.meta.activeYear;
+      const bucket = wb.income[y] || {};
+      const oldJan = bucket["JAN"] || {};
+      const fresh = { JAN: {} };
+      wb.employees.forEach(emp => {
+        const b = oldJan[emp.id];
+        fresh["JAN"][emp.id] = {
+          gaji: b ? (b.gaji || 0) : 0,
+          tunjLain: b ? (b.tunjLain || 0) : 0,
+          lembur: 0, honor: 0, natura: 0, tantiem: 0,
+          zakat: emp.zakat || 0, grossUp: emp.grossUp, premiOn: true
+        };
+      });
+      wb.income[y] = fresh;
     });
   }
 
@@ -115,8 +202,9 @@ window.DB = (function () {
       if (emp.tglKeluar === undefined) emp.tglKeluar = "";
       if (emp.tglMasuk === undefined) emp.tglMasuk = "";
       wb.employees.push(emp);
-      wb.income["JAN"] = wb.income["JAN"] || {};
-      wb.income["JAN"][emp.id] = {
+      const bucket = yearBucket(wb);
+      bucket["JAN"] = bucket["JAN"] || {};
+      bucket["JAN"][emp.id] = {
         gaji: emp._gaji || 0, tunjLain: emp._tunjLain || 0, lembur: 0, honor: 0, natura: 0,
         tantiem: 0, zakat: emp.zakat || 0, grossUp: emp.grossUp, premiOn: true
       };
@@ -129,7 +217,9 @@ window.DB = (function () {
   function removeEmployee(id) {
     patch(wb => {
       wb.employees = wb.employees.filter(e => e.id !== id);
-      Object.keys(wb.income).forEach(mk => { delete wb.income[mk][id]; });
+      Object.keys(wb.income).forEach(yr => {
+        Object.keys(wb.income[yr]).forEach(mk => { delete wb.income[yr][mk][id]; });
+      });
     });
   }
 
@@ -153,8 +243,9 @@ window.DB = (function () {
 
   return {
     ensureSeed, ensureTer, load, save, patch,
-    incomeFor, setIncome, addEmployee, updateEmployee, removeEmployee,
-    setStatus, isPayMonth, monthNum, reset, blank
+    incomeFor, setIncome, resetIncome, addEmployee, updateEmployee, removeEmployee,
+    setStatus, isPayMonth, monthNum, reset, blank,
+    activeYear, availableYears, setActiveYear, addYear
   };
 })();
 

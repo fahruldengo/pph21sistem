@@ -10,9 +10,12 @@ let PAGE = 1;
   UI.mount("pegawai", "Data Induk / <b>Data Pegawai</b>");
 
   document.getElementById("addBtn").innerHTML = UI.icon("plus") + " Tambah Pegawai";
-  document.getElementById("exportBtn").innerHTML = UI.icon("download") + " Ekspor CSV";
+  document.getElementById("exportBtn").innerHTML = UI.icon("download") + " Ekspor ▾";
   document.getElementById("addBtn").onclick = () => openForm();
-  document.getElementById("exportBtn").onclick = exportCsv;
+  const pop = document.getElementById("exportPop");
+  document.getElementById("exportBtn").onclick = (e) => { e.stopPropagation(); pop.classList.toggle("show"); };
+  document.addEventListener("click", () => pop.classList.remove("show"));
+  pop.querySelectorAll("[data-fmt]").forEach(b => b.onclick = () => { pop.classList.remove("show"); doExport(b.dataset.fmt); });
 
   // PTKP filter options
   const pf = document.getElementById("ptkpFilter");
@@ -256,20 +259,19 @@ function openForm(id) {
   };
 }
 
-function exportCsv() {
+function doExport(fmt) {
+  const yr = DB.activeYear();
   const rows = filtered();
-  const head = ["Nama", "Jabatan", "NIK", "PTKP", "GrossUp", "Status", "BulanMulai", "BulanAkhir", "Gaji", "TunjLainnya"];
-  const data = rows.map(emp => {
+  const head = ["No", "Nama", "Jabatan", "NIK", "PTKP", "GrossUp", "Status", "BulanMulai", "BulanAkhir", "Gaji", "Tunjangan"];
+  const data = rows.map((emp, i) => {
     const inc = DB.incomeFor("JAN", emp);
-    return [emp.nama, emp.jabatan, emp.nik, emp.ptkp, emp.grossUp ? "Yes" : "No",
+    return [i + 1, emp.nama, emp.jabatan, emp.nik, emp.ptkp, emp.grossUp ? "Yes" : "No",
       (emp.status || "aktif"), REF.months[(emp.bulanMulai || 1) - 1].label,
       REF.months[(emp.bulanAkhir || 12) - 1].label, inc.gaji || 0, inc.tunjLain || 0];
   });
-  const csv = [head, ...data].map(r => r.map(c => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
-  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `DataPegawai_${DB.load().meta.year}.csv`;
-  a.click();
-  UI.toast("CSV diekspor");
+  Exporter.download(fmt, {
+    filename: `DataPegawai_${yr}`, sheetName: `Data Pegawai ${yr}`, head, rows: data,
+    numericCols: [9, 10]
+  });
+  UI.toast(fmt === "xlsx" ? "Excel diekspor" : "CSV diekspor");
 }

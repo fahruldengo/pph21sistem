@@ -57,14 +57,17 @@ Auth.guard();
   const p = DB.load().pemotong;
   const F = ["nama","npwp","alamat","kota","telp","namaPemotong","npwpPemotong","tahun"];
   F.forEach(k => document.getElementById(k).value = p[k] ?? "");
+  document.getElementById("tahun").value = DB.activeYear();
   document.getElementById("saveBtn").innerHTML = UI.icon("save")+" Simpan Perubahan";
   document.getElementById("saveBtn").onclick = () => {
+    const newYear = Number(document.getElementById("tahun").value) || DB.activeYear();
     DB.patch(wb => {
-      F.forEach(k => wb.pemotong[k] = document.getElementById(k).value);
-      wb.pemotong.tahun = Number(document.getElementById("tahun").value) || wb.pemotong.tahun;
-      wb.meta.year = wb.pemotong.tahun;
+      F.filter(k => k !== "tahun").forEach(k => wb.pemotong[k] = document.getElementById(k).value);
+      wb.pemotong.tahun = newYear;
     });
+    if (newYear !== DB.activeYear()) DB.setActiveYear(newYear);
     UI.toast("Data pemotong tersimpan");
+    setTimeout(() => location.reload(), 400);
   };
 })();
 </script>
