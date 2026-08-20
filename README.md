@@ -17,11 +17,19 @@ Basis data tersimpan di dalam browser (localStorage) sehingga tidak perlu server
 | **Dashboard** | Ringkasan pemotongan PPh 21 seluruh masa pajak |
 | **Data Pemotong** | Identitas perusahaan & penandatangan bukti potong |
 | **Elemen PPh 21** | Persentase iuran BPJS (JKK, JKM, JHT, JP, Kesehatan) + batas gaji |
-| **Input Penghasilan** | Basis data pegawai + input penghasilan per masa (grid seperti spreadsheet), impor/ekspor CSV |
+| **Data Pegawai** | Monitoring seluruh pegawai (aktif & nonaktif), tambah/edit, filter status + jumlah tampil, ekspor CSV |
+| **Input Penghasilan** | Input penghasilan per masa (grid seperti spreadsheet), impor/ekspor CSV — pegawai nonaktif terkunci |
 | **Kalkulator PPh 21** | Hitung satu pegawai dengan rincian lengkap + terbilang |
 | **Rekap Bulanan** | Daftar pemotongan seluruh pegawai per masa pajak (siap cetak) |
 | **Perhitungan Tahunan** | Rekonsiliasi Pasal 17 masa Desember (kurang/lebih potong) |
 | **Summary Setahun** | Matriks PPh 21 tiap pegawai Januari–Desember |
+
+**Status kepegawaian.** Setiap pegawai punya status **aktif** atau **nonaktif**. Saat
+pegawai ditandai nonaktif, Anda memilih bulan terakhir bekerja — penghasilan setelah bulan
+itu berhenti dihitung dan sel-nya terkunci di Input Penghasilan, tetapi pegawai **tetap masuk
+Perhitungan Tahunan** (otomatis "disetahunkan" bila bekerja < 12 bulan). Di menu Data Pegawai
+tersedia filter **status** dan filter **jumlah karyawan yang ditampilkan** (10/25/50/semua)
+dengan penomoran halaman.
 
 Logika kunci yang dipertahankan dari Excel:
 - **TER A/B/C** dipilih otomatis dari status PTKP (sheet `TER`).

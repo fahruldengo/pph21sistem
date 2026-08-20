@@ -69,7 +69,9 @@ Auth.guard();
 
   const wb = DB.load();
   const emps = wb.employees;
-  document.getElementById("empCount").textContent = emps.length + " pegawai aktif";
+  const aktif = emps.filter(e => (e.status || "aktif") === "aktif").length;
+  const nonaktif = emps.length - aktif;
+  document.getElementById("empCount").textContent = `${aktif} aktif · ${nonaktif} nonaktif`;
 
   // compute per-month totals
   let ytdPph = 0, ytdBruto = 0, janPph = 0;
@@ -100,7 +102,7 @@ Auth.guard();
   document.getElementById("stats").innerHTML = `
     <div class="stat"><div class="stat__label">Pegawai</div>
       <div class="stat__value">${emps.length}</div>
-      <div class="stat__meta">terdaftar dalam sistem</div></div>
+      <div class="stat__meta">${aktif} aktif · ${nonaktif} nonaktif</div></div>
     <div class="stat stat--ok"><div class="stat__label">PPh 21 Januari</div>
       <div class="stat__value" style="font-size:20px">${fmt.rp(janPph)}</div>
       <div class="stat__meta">masa pajak berjalan</div></div>

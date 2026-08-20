@@ -1,5 +1,7 @@
 Auth.guard();
 let MONTH = "JAN";
+let STATUS = "all";
+let PAGE_SIZE = 50;
 
 (async function () {
   await DB.ensureSeed(); await DB.ensureTer();
@@ -18,6 +20,15 @@ let MONTH = "JAN";
   document.getElementById("importBtn").onclick = importCsv;
   document.getElementById("search").oninput = render;
 
+  document.querySelectorAll("#statusFilter button").forEach(b => {
+    b.onclick = () => {
+      document.querySelectorAll("#statusFilter button").forEach(x => x.classList.remove("active"));
+      b.classList.add("active"); STATUS = b.dataset.s; render();
+    };
+  });
+  const ps = document.getElementById("pageSize");
+  ps.onchange = () => { PAGE_SIZE = ps.value === "all" ? "all" : +ps.value; render(); };
+
   render();
 })();
 
@@ -29,7 +40,9 @@ function render() {
     "Daftar Pegawai — " + REF.months.find(m => m.key === MONTH).label;
 
   let emps = wb.employees;
+  if (STATUS !== "all") emps = emps.filter(e => (e.status || "aktif") === STATUS);
   if (q) emps = emps.filter(e => (e.nama + " " + e.jabatan).toLowerCase().includes(q));
+  if (PAGE_SIZE !== "all") emps = emps.slice(0, PAGE_SIZE);
 
   if (!emps.length) {
     tbody.innerHTML = `<tr><td colspan="14"><div class="empty">
@@ -43,13 +56,23 @@ function render() {
     const inc = DB.incomeFor(MONTH, emp);
     const r = Engine.monthly({ ...emp, ...inc }, inc.tantiem || 0);
     totDpp += r.dpp; totPph += r.pph;
-    const cell = (field, val, cls) =>
-      `<td class="num"><input data-id="${emp.id}" data-f="${field}" value="${val || 0}"
+    // Inactive employees (and months outside their working window) are locked:
+    // income can't be edited, but they still appear here and in annual recap.
+    const locked = !DB.isPayMonth(MONTH, emp) || (emp.status === "nonaktif" && !DB.isPayMonth(MONTH, emp));
+    const nonaktif = (emp.status === "nonaktif");
+    const cell = (field, val, cls) => {
+      if (locked) {
+        return `<td class="num" style="color:var(--ink-soft);font-family:var(--mono)">${fmt.rpPlain(val || 0)}</td>`;
+      }
+      return `<td class="num"><input data-id="${emp.id}" data-f="${field}" value="${val || 0}"
         class="cell-in ${cls}" style="width:110px;text-align:right;font-family:var(--mono);
         border:1px solid transparent;border-radius:6px;padding:4px 7px;background:${cls === 'input-green' ? '#edf6ef' : '#eff5fb'}"></td>`;
-    return `<tr>
+    };
+    const statusTag = nonaktif
+      ? `<div style="font-size:10px;color:var(--accent);font-weight:600;margin-top:2px">NONAKTIF s.d. ${REF.months[(emp.bulanAkhir||12)-1].label}</div>` : "";
+    return `<tr${locked ? ' style="background:#faf7f2"' : ''}>
       <td>${i + 1}</td>
-      <td><b>${emp.nama}</b><div style="font-size:11px;color:var(--ink-soft)">${emp.nik || '—'}</div></td>
+      <td><b>${emp.nama}</b><div style="font-size:11px;color:var(--ink-soft)">${emp.nik || '—'}</div>${statusTag}</td>
       <td>${emp.jabatan || '—'}</td>
       <td><span class="pill pill--muted">${emp.ptkp}</span></td>
       <td>${emp.grossUp ? '<span class="pill pill--teal">Yes</span>' : '<span class="pill pill--muted">No</span>'}</td>
@@ -62,8 +85,8 @@ function render() {
       <td><span class="pill pill--clay">${r.category.replace('TER ', '')} · ${fmt.pct(r.rate)}</span></td>
       <td class="num"><b>${fmt.rpPlain(r.pph)}</b></td>
       <td><div class="row-actions">
-        <button class="btn btn--sm btn--ghost" data-edit="${emp.id}" title="Edit">${UI.icon('edit')}</button>
-        <button class="btn btn--sm btn--ghost btn--danger" data-del="${emp.id}" title="Hapus">${UI.icon('trash')}</button>
+        ${locked ? `<span class="pill pill--muted" title="Terkunci — pegawai tidak aktif pada masa ini">${UI.icon('logout')}</span>`
+          : `<button class="btn btn--sm btn--ghost" data-edit="${emp.id}" title="Edit">${UI.icon('edit')}</button>`}
       </div></td>
     </tr>`;
   }).join("") +
@@ -85,12 +108,6 @@ function render() {
     inp.onkeydown = e => { if (e.key === "Enter") inp.blur(); };
   });
   tbody.querySelectorAll("[data-edit]").forEach(b => b.onclick = () => openEmployeeForm(b.dataset.edit));
-  tbody.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
-    const emp = DB.load().employees.find(e => e.id === b.dataset.del);
-    if (confirm(`Hapus pegawai "${emp.nama}"? Semua data penghasilannya ikut terhapus.`)) {
-      DB.removeEmployee(b.dataset.del); UI.toast("Pegawai dihapus"); render();
-    }
-  });
 }
 
 function openEmployeeForm(id) {

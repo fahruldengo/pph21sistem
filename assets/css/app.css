@@ -244,3 +244,29 @@ table.grid tbody tr:last-child td{border-bottom:none}
   body{background:#fff}
   @page{size:A4 landscape;margin:12mm}
 }
+
+/* ---------- Filter bar (Data Pegawai) ---------- */
+.filter-bar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px;margin-bottom:8px}
+.filter-field{display:flex;flex-direction:column;gap:5px}
+.filter-field label{font-size:11px;font-weight:600;color:var(--ink-soft);letter-spacing:.02em}
+.filter-field--grow{flex:1;min-width:200px}
+.filter-field select,.filter-field input{
+  padding:8px 11px;border:1px solid var(--line-strong);border-radius:8px;
+  font-family:var(--sans);font-size:13px;color:var(--ink);background:var(--card)}
+.filter-field select:focus,.filter-field input:focus{
+  outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-050)}
+.filter-seg{display:inline-flex;background:#f0ede6;border-radius:9px;padding:3px}
+.filter-seg button{
+  border:none;background:transparent;padding:7px 15px;border-radius:7px;
+  font-family:var(--sans);font-size:13px;font-weight:600;color:var(--ink-soft);cursor:pointer;transition:.12s}
+.filter-seg button:hover{color:var(--ink)}
+.filter-seg button.active{background:var(--card);color:var(--brand-600);box-shadow:0 1px 3px rgba(22,48,47,.12)}
+
+/* ---------- Pager ---------- */
+.pager{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;padding:14px 8px 6px}
+.pager__btn{
+  min-width:34px;height:34px;padding:0 9px;border:1px solid var(--line-strong);background:var(--card);
+  border-radius:8px;font-family:var(--sans);font-size:13px;font-weight:600;color:var(--ink-soft);cursor:pointer;transition:.12s}
+.pager__btn:hover:not(:disabled){border-color:var(--brand);color:var(--brand-600)}
+.pager__btn.active{background:var(--brand);border-color:var(--brand);color:#fff}
+.pager__btn:disabled{opacity:.4;cursor:not-allowed}

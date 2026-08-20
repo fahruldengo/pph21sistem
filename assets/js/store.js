@@ -39,7 +39,8 @@ window.DB = (function () {
       alamat: e.alamat || "", asing: e.asing || "N",
       negara: e.negara || "Indonesia",
       bulanMulai: e.bulanMulai || 1, bulanAkhir: e.bulanAkhir || 12,
-      grossUp: (e.grossUp === "Yes"), zakat: e.zakat || 0
+      grossUp: (e.grossUp === "Yes"), zakat: e.zakat || 0,
+      status: "aktif", tglMasuk: "", tglKeluar: ""
     }));
     wb.income["JAN"] = {};
     wb.employees.forEach((emp, i) => {
@@ -72,16 +73,32 @@ window.DB = (function () {
   function save(wb) { cache = wb; localStorage.setItem(KEY, JSON.stringify(wb)); }
   function patch(fn) { const wb = load(); fn(wb); save(wb); }
 
-  // Income accessor for a given month, defaulting from master + January
+  // Month key -> 1..12 index (JAN=1 ... DES=12)
+  const MONTH_ORDER = ["JAN","FEB","MAR","APR","MEI","JUN","JUL","AGU","SEP","OKT","NOV","DES"];
+  function monthNum(monthKey) { return MONTH_ORDER.indexOf(monthKey) + 1; }
+
+  // True if the employee is being paid in this month (within employment window)
+  function isPayMonth(monthKey, emp) {
+    const n = monthNum(monthKey);
+    if (n < 1) return true;
+    const start = emp.bulanMulai || 1;
+    const end = (emp.status === "nonaktif" && emp.bulanAkhir) ? emp.bulanAkhir : (emp.bulanAkhir || 12);
+    return n >= start && n <= end;
+  }
+
+  const ZERO_INC = e => ({ gaji: 0, tunjLain: 0, honor: 0, natura: 0, tantiem: 0,
+    zakat: e.zakat || 0, grossUp: e.grossUp, premiOn: true });
+
+  // Income accessor for a given month, defaulting from master + January.
+  // Outside the employment window (e.g. after an employee left) returns zeros.
   function incomeFor(monthKey, emp) {
+    if (!isPayMonth(monthKey, emp)) return ZERO_INC(emp);
     const wb = load();
     const m = wb.income[monthKey] || {};
     if (m[emp.id]) return m[emp.id];
     // default: reuse January (recurring salary) or zeros
     const jan = (wb.income["JAN"] || {})[emp.id];
-    return jan ? { ...jan, tantiem: 0 } :
-      { gaji: 0, tunjLain: 0, honor: 0, natura: 0, tantiem: 0, zakat: emp.zakat || 0,
-        grossUp: emp.grossUp, premiOn: true };
+    return jan ? { ...jan, tantiem: 0 } : ZERO_INC(emp);
   }
   function setIncome(monthKey, empId, data) {
     patch(wb => {
@@ -94,6 +111,9 @@ window.DB = (function () {
     patch(wb => {
       const n = wb.employees.length + 1;
       emp.id = "E" + String(Date.now()).slice(-6);
+      if (!emp.status) emp.status = "aktif";
+      if (emp.tglKeluar === undefined) emp.tglKeluar = "";
+      if (emp.tglMasuk === undefined) emp.tglMasuk = "";
       wb.employees.push(emp);
       wb.income["JAN"] = wb.income["JAN"] || {};
       wb.income["JAN"][emp.id] = {
@@ -113,11 +133,28 @@ window.DB = (function () {
     });
   }
 
+  // Set active/inactive. When marking inactive, bulanAkhir is set so the
+  // employee stops generating income after their last working month but still
+  // appears in the annual reconciliation.
+  function setStatus(id, status, bulanAkhir) {
+    patch(wb => {
+      const e = wb.employees.find(x => x.id === id);
+      if (!e) return;
+      e.status = status;
+      if (status === "nonaktif") {
+        if (bulanAkhir) e.bulanAkhir = bulanAkhir;
+      } else {
+        e.bulanAkhir = 12; e.tglKeluar = "";
+      }
+    });
+  }
+
   function reset() { localStorage.removeItem(KEY); cache = null; }
 
   return {
     ensureSeed, ensureTer, load, save, patch,
-    incomeFor, setIncome, addEmployee, updateEmployee, removeEmployee, reset, blank
+    incomeFor, setIncome, addEmployee, updateEmployee, removeEmployee,
+    setStatus, isPayMonth, monthNum, reset, blank
   };
 })();
 
