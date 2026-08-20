@@ -46,7 +46,7 @@ window.DB = (function () {
     wb.employees.forEach((emp, i) => {
       const src = seed.employees[i];
       wb.income["JAN"][emp.id] = {
-        gaji: src.gaji || 0, tunjLain: src.tunjLain || 0,
+        gaji: src.gaji || 0, tunjLain: src.tunjLain || 0, lembur: 0,
         honor: src.honor || 0, natura: src.natura || 0,
         tantiem: 0, zakat: src.zakat || 0,
         grossUp: emp.grossUp, premiOn: true
@@ -86,7 +86,7 @@ window.DB = (function () {
     return n >= start && n <= end;
   }
 
-  const ZERO_INC = e => ({ gaji: 0, tunjLain: 0, honor: 0, natura: 0, tantiem: 0,
+  const ZERO_INC = e => ({ gaji: 0, tunjLain: 0, lembur: 0, honor: 0, natura: 0, tantiem: 0,
     zakat: e.zakat || 0, grossUp: e.grossUp, premiOn: true });
 
   // Income accessor for a given month, defaulting from master + January.
@@ -117,7 +117,7 @@ window.DB = (function () {
       wb.employees.push(emp);
       wb.income["JAN"] = wb.income["JAN"] || {};
       wb.income["JAN"][emp.id] = {
-        gaji: emp._gaji || 0, tunjLain: emp._tunjLain || 0, honor: 0, natura: 0,
+        gaji: emp._gaji || 0, tunjLain: emp._tunjLain || 0, lembur: 0, honor: 0, natura: 0,
         tantiem: 0, zakat: emp.zakat || 0, grossUp: emp.grossUp, premiOn: true
       };
       delete emp._gaji; delete emp._tunjLain;

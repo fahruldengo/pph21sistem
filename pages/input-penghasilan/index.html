@@ -12,19 +12,15 @@
 <div class="app"><div class="main">
   <div class="content">
     <div class="page-head"><div class="page-head__row">
-      <div><h1>Input Penghasilan</h1><p>Basis data pegawai dan penghasilan per masa pajak. Kolom penghasilan dapat diedit langsung; PPh 21 dihitung otomatis dengan metode TER.</p></div>
+      <div><h1>Input Penghasilan</h1><p>Penghasilan pegawai per masa pajak. Gaji dan tunjangan mengikuti data di menu Data Pegawai; klik <b>Input</b> pada tiap baris untuk mengisi lembur, honor, dan penghasilan lain lewat jendela pop-up. PPh 21 dihitung otomatis dengan metode TER.</p></div>
       <div class="spacer"></div>
       <select id="monthSel" style="padding:9px 12px;border:1px solid var(--line-strong);border-radius:8px;font-family:var(--sans);font-size:13.5px;font-weight:600"></select>
-      <button class="btn" id="importBtn"></button>
       <button class="btn" id="exportBtn"></button>
-      <button class="btn btn--primary" id="addBtn"></button>
     </div></div>
 
     <div class="notice notice--info">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-      <div>Sel <span style="background:#eff5fb;border:1px solid #c7dbef;padding:0 6px;border-radius:4px">biru</span> dan
-        <span style="background:#edf6ef;border:1px solid #c6e2cd;padding:0 6px;border-radius:4px">hijau</span> adalah input. Ubah nilai lalu klik di luar sel untuk menyimpan.
-        Pegawai <b>nonaktif</b> tampil terkunci dan penghasilannya tidak dapat diinput — kelola status di menu <b>Data Pegawai</b>.</div>
+      <div>Kolom di tabel hanya menampilkan data. Untuk mengubah penghasilan, klik tombol <b>Input</b> pada baris pegawai. <b>Lembur &amp; Lain-lain</b> otomatis dijumlahkan ke tunjangan. Pegawai <b>nonaktif</b> terkunci pada masa setelah berhenti — kelola status di menu <b>Data Pegawai</b>.</div>
     </div>
 
     <div class="card">
@@ -36,25 +32,32 @@
           <button data-s="aktif">Aktif</button>
           <button data-s="nonaktif">Nonaktif</button>
         </div>
-        <select id="pageSize" style="padding:7px 11px;border:1px solid var(--line-strong);border-radius:8px;font-size:13px">
-          <option value="25">25 pegawai</option>
-          <option value="50" selected>50 pegawai</option>
-          <option value="all">Semua</option>
-        </select>
+        <div class="filter-field" style="flex-direction:row;align-items:center;gap:7px">
+          <label style="margin:0">Tampilkan</label>
+          <select id="pageSize">
+            <option value="5">5</option>
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="25" selected>25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </div>
         <input id="search" placeholder="Cari nama / jabatan…" style="padding:7px 11px;border:1px solid var(--line-strong);border-radius:8px;font-size:13px;width:200px">
       </div>
       <div class="card__body card__body--flush">
         <div class="table-wrap">
           <table class="grid" id="grid">
             <thead><tr>
-              <th>No</th><th>Nama</th><th>Jabatan</th><th>PTKP</th><th>Gross Up</th>
-              <th class="num">Gaji</th><th class="num">Tunj. Lainnya</th><th class="num">Honorarium</th>
-              <th class="num">Natura</th><th class="num">Tantiem/THR</th>
-              <th class="num">DPP</th><th>TER</th><th class="num">PPh 21</th><th></th>
+              <th>No</th><th>Nama / NIK</th><th>PTKP</th><th>Gross Up</th>
+              <th class="num">Gaji</th><th class="num">Tunjangan</th><th class="num">Lembur &amp; Lain-lain</th>
+              <th class="num">Total Tunjangan</th><th class="num">Honor</th><th class="num">Tantiem/THR</th>
+              <th class="num">DPP</th><th>TER</th><th class="num">PPh 21</th><th style="text-align:right">Aksi</th>
             </tr></thead>
             <tbody></tbody>
           </table>
         </div>
+        <div class="pager" id="pager"></div>
       </div>
     </div>
   </div>

@@ -18,7 +18,7 @@ Basis data tersimpan di dalam browser (localStorage) sehingga tidak perlu server
 | **Data Pemotong** | Identitas perusahaan & penandatangan bukti potong |
 | **Elemen PPh 21** | Persentase iuran BPJS (JKK, JKM, JHT, JP, Kesehatan) + batas gaji |
 | **Data Pegawai** | Monitoring seluruh pegawai (aktif & nonaktif), tambah/edit, filter status + jumlah tampil, ekspor CSV |
-| **Input Penghasilan** | Input penghasilan per masa (grid seperti spreadsheet), impor/ekspor CSV — pegawai nonaktif terkunci |
+| **Input Penghasilan** | Tabel penghasilan per masa (hanya menampilkan data); input/edit lewat pop-up dengan pratinjau PPh langsung. Kolom **Lembur & Lain-lain** otomatis masuk ke tunjangan. Filter jumlah tampil 5/10/20/25/50/100 |
 | **Kalkulator PPh 21** | Hitung satu pegawai dengan rincian lengkap + terbilang |
 | **Rekap Bulanan** | Daftar pemotongan seluruh pegawai per masa pajak (siap cetak) |
 | **Perhitungan Tahunan** | Rekonsiliasi Pasal 17 masa Desember (kurang/lebih potong) |

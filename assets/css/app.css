@@ -270,3 +270,13 @@ table.grid tbody tr:last-child td{border-bottom:none}
 .pager__btn:hover:not(:disabled){border-color:var(--brand);color:var(--brand-600)}
 .pager__btn.active{background:var(--brand);border-color:var(--brand);color:#fff}
 .pager__btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ---------- Income modal header + preview ---------- */
+.modal-emp{display:flex;align-items:center;gap:13px;padding:2px 0 4px;margin-bottom:6px}
+.modal-emp__avatar{width:44px;height:44px;border-radius:11px;background:var(--brand);color:#fff;
+  display:grid;place-items:center;font-family:var(--display);font-weight:600;font-size:15px;flex:0 0 44px}
+.modal-emp__name{font-family:var(--display);font-weight:600;font-size:16px;color:var(--ink)}
+.modal-emp__meta{font-size:12.5px;color:var(--ink-soft);margin-top:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.modal-emp__month{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--brand-600);
+  background:var(--brand-050);padding:5px 11px;border-radius:8px;white-space:nowrap}
+.calc-preview{margin-top:18px;padding:16px 18px;background:#f6f4ef;border:1px solid var(--line);border-radius:12px}

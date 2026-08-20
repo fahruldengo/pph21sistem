@@ -48,6 +48,7 @@ window.Engine = (function () {
   function monthly(emp, tantiem = 0) {
     const gaji = num(emp.gaji);
     const tunjLain = num(emp.tunjLain);
+    const lembur = num(emp.lembur);        // lembur & lain-lain (ditambahkan ke tunjangan)
     const honor = num(emp.honor);
     const natura = num(emp.natura);
     const premi = emp.premiOn === false ? { total: 0 } : employerPremi(gaji);
@@ -57,7 +58,7 @@ window.Engine = (function () {
     // Gross-up: tunjangan PPh = the tax itself. Solve iteratively so
     // that adding the tax to gross reproduces the workbook's S=IF(grossUp,AF).
     const compute = (tpph) => {
-      const teratur = gaji + tpph + tunjLain + honor + premi.total + natura;
+      const teratur = gaji + tpph + tunjLain + lembur + honor + premi.total + natura;
       const dpp = roundDown(teratur + tantiem, 0);          // AC5 = ROUNDDOWN(AA+AB,0)
       const rate = terRate(category, dpp);                  // AE5
       const pph = round(dpp * rate);                        // AF5 = ROUND(AC*AE,0)
